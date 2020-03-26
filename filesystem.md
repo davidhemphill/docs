@@ -2,10 +2,14 @@
 
 - [Introduction](#introduction)
 - [Configuration](#configuration)
+     - [Driver Prerequisites](#driver-prerequisites)
+    - [The Default Disk](#the-default-disk)
+    - [The Default Cloud Disk](#the-default-cloud-disk)
     - [The Public Disk](#the-public-disk)
-    - [The Local Driver](#the-local-driver)
-    - [Driver Prerequisites](#driver-prerequisites)
-    - [Caching](#caching)
+        - [Additional Public Disk Symbolic Links](#symbolic-links)
+    - [The Local Disk](#the-local-disk)
+- [Local Driver Permissions](#local-driver-permission)
+- [Caching](#caching)
 - [Obtaining Disk Instances](#obtaining-disk-instances)
 - [Retrieving Files](#retrieving-files)
     - [Downloading Files](#downloading-files)
@@ -29,52 +33,6 @@ Laravel provides a powerful filesystem abstraction thanks to the wonderful [Flys
 The filesystem configuration file is located at `config/filesystems.php`. Within this file you may configure all of your "disks". Each disk represents a particular storage driver and storage location. Example configurations for each supported driver are included in the configuration file. So, modify the configuration to reflect your storage preferences and credentials.
 
 You may configure as many disks as you like, and may even have multiple disks that use the same driver.
-
-<a name="the-public-disk"></a>
-### The Public Disk
-
-The `public` disk is intended for files that are going to be publicly accessible. By default, the `public` disk uses the `local` driver and stores these files in `storage/app/public`. To make them accessible from the web, you should create a symbolic link from `public/storage` to `storage/app/public`. This convention will keep your publicly accessible files in one directory that can be easily shared across deployments when using zero down-time deployment systems like [Envoyer](https://envoyer.io).
-
-To create the symbolic link, you may use the `storage:link` Artisan command:
-
-    php artisan storage:link
-
-Once a file has been stored and the symbolic link has been created, you can create a URL to the files using the `asset` helper:
-
-    echo asset('storage/file.txt');
-
-You may configure additional symbolic links in your `filesystems` configuration file. Each of the configured links will be created when you run the `storage:link` command:
-
-    'links' => [
-        public_path('storage') => storage_path('app/public'),
-        public_path('images') => storage_path('app/images'),
-    ],
-
-<a name="the-local-driver"></a>
-### The Local Driver
-
-When using the `local` driver, all file operations are relative to the `root` directory defined in your `filesystems` configuration file. By default, this value is set to the `storage/app` directory. Therefore, the following method would store a file in `storage/app/file.txt`:
-
-    Storage::disk('local')->put('file.txt', 'Contents');
-
-#### Permissions
-
-The `public` [visibility](#file-visibility) translates to `0755` for directories and `0644` for files. You can modify the permissions mappings in your `filesystems` configuration file:
-
-    'local' => [
-        'driver' => 'local',
-        'root' => storage_path('app'),
-        'permissions' => [
-            'file' => [
-                'public' => 0664,
-                'private' => 0600,
-            ],
-            'dir' => [
-                'public' => 0775,
-                'private' => 0700,
-            ],
-        ],
-    ],
 
 <a name="driver-prerequisites"></a>
 ### Driver Prerequisites
@@ -132,8 +90,71 @@ Laravel's Flysystem integrations works great with SFTP; however, a sample config
         // 'timeout' => 30,
     ],
 
+<a name="the-default-disk"></a>
+### The Default Disk
+
+By default, Laravel is configured to use the `local` disk in combination with the `local` driver as its default disk. This disk will be used when a specific filesystem disk is not specified:
+
+    Storage::put('avatars/1', $fileContents);
+
+<a name="the-default-cloud-disk"></a>
+### The Default Cloud Disk
+
+Laravel is also configured with a "cloud" disk for storing files on a cloud file storage service. The default cloud disk uses the configured `s3` disk in conjunction with the `s3` driver. You may use the `cloud` method on the `Storage` facade to get an instance of the default cloud disk:
+
+    Storage::cloud()->put('avatars/1', $fileContents);
+
+<a name="the-public-disk"></a>
+### The Public Disk
+
+The `public` disk is intended for files that are going to be publicly accessible. By default, the `public` disk uses the `local` driver and stores these files in `storage/app/public`. To make them accessible from the web, you should create a symbolic link from `public/storage` to `storage/app/public`. This convention will keep your publicly accessible files in one directory that can be easily shared across deployments when using zero down-time deployment systems like [Envoyer](https://envoyer.io).
+
+To create the symbolic link, you may use the `storage:link` Artisan command:
+
+    php artisan storage:link
+
+Once a file has been stored and the symbolic link has been created, you can create a URL to the files using the `asset` helper:
+
+    echo asset('storage/file.txt');
+
+#### Additional Public Disk Symbolic Links
+
+You may configure additional symbolic links in your `filesystems` configuration file. Each of the configured links will be created when you run the `storage:link` command:
+
+    'links' => [
+        public_path('storage') => storage_path('app/public'),
+        public_path('images') => storage_path('app/images'),
+    ],
+
+<a name="the-local-disk"></a>
+### The Local Disk
+
+Laravel is configured with a separate "local" disk for storing non-public files. The local disk uses the `local` filesystem driver. When using the `local` disk, all file operations are relative to the `root` directory defined in your `filesystems` configuration file. By default, this value is set to the `storage/app` directory. Therefore, the following method would store a file in `storage/app/file.txt`:
+
+    Storage::disk('local')->put('file.txt', 'Contents');
+
+<a name="local-driver-permission"></a>
+## Local Driver Permissions
+
+When using the `local` driver, you may customize the permissions used when storing files publicly and privately. The `public` [visibility](#file-visibility) translates to `0755` for directories and `0644` for files. The `private` [visibility](#file-visibility) translates to `0700` for directories and `0600` for files. You can modify the permissions mappings in your `filesystems` configuration file:
+
+    'local' => [
+        'driver' => 'local',
+        'root' => storage_path('app'),
+        'permissions' => [
+            'file' => [
+                'public' => 0664,
+                'private' => 0600,
+            ],
+            'dir' => [
+                'public' => 0775,
+                'private' => 0700,
+            ],
+        ],
+    ],
+
 <a name="caching"></a>
-### Caching
+## Caching
 
 To enable caching for a given disk, you may add a `cache` directive to the disk's configuration options. The `cache` option should be an array of caching options containing the `disk` name, the `expire` time in seconds, and the cache `prefix`:
 
@@ -148,7 +169,6 @@ To enable caching for a given disk, you may add a `cache` directive to the disk'
             'prefix' => 'cache-prefix',
         ],
     ],
-
 <a name="obtaining-disk-instances"></a>
 ## Obtaining Disk Instances
 
@@ -161,6 +181,10 @@ The `Storage` facade may be used to interact with any of your configured disks. 
 If your application interacts with multiple disks, you may use the `disk` method on the `Storage` facade to work with files on a particular disk:
 
     Storage::disk('s3')->put('avatars/1', $fileContents);
+    
+You may also obtain an instance of your configured "cloud" disk by using the `cloud` method:
+
+    Storage::cloud()->put('avatars/1', $fileContents);
 
 <a name="retrieving-files"></a>
 ## Retrieving Files
