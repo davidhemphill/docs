@@ -58,6 +58,12 @@
       ]
     },
     {
+      "group": "Quickstart",
+      "pages": [
+        "quickstart/laravel"
+      ]
+    },
+    {
       "group": "Essentials",
       "pages": [
         "essentials/markdown",

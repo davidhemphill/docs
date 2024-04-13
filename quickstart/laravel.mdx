@@ -1,0 +1,213 @@
+## Introduction
+
+Shove's Laravel package provides a simple way to integrate Shove's
+queuing and scheduling features into your Laravel application.
+Shove's Laravel package includes a queue driver that allows you to
+send jobs to your Laravel application using Shove's infrastructure.
+
+## Why Use Shove with Laravel?
+
+Laravel comes with an incredibly powerful queue system that allows you
+to offload processing of time-consuming tasks to the background. This
+is useful for workflows like sending emails, processing payments, and
+more.
+
+One of the downsides of using Laravel's queue system is that it
+requires you to run separate infrastructure to handle the jobs
+themselves, whether that's Redis, Amazon SQS, or another queue
+software. Using Shove, you don't need to manage this infrastructure
+yourself, yet you retain the ability to use Laravel's queue
+system to process your background tasks.
+
+In addition, you gain the ability to schedule your Laravel jobs
+far into the future and to create _recurring jobs_, giving you even
+more flexibility when building your application.
+
+## Setting Up A Queue
+
+Before Shove can send jobs to your Laravel application, you need to
+create a queue to receive those jobs. We recommend creating your first
+queue via the Shove dashboard, but you can also create a queue using the
+included PHP library for Shove's API.
+
+### Creating a New Queue Using the Shove Dashboard
+
+To create a new queue in the Shove dashboard, visit the Queues page and
+click `Create Queue`. You will be presented with a form to specify the
+name and type of your new queue, along with the type. When using
+Shove's Laravel driver, this should be a _unicast_ queue.
+
+[Learn more about Queue types]()
+
+::: tip Queue Types
+While we recommend using a unicast queue with a single worker for most
+Laravel applications,
+you may also configure your queue as a multicast queue. This allows
+jobs to be handled by multiple workers at once (which can be at a
+completely different server) allowing you more flexibility in
+processing a single job.
+:::
+
+### Creating a New Queue Using the Shove PHP Library
+
+```php
+use Shove\ShoveConnector;
+
+$shove = new ShoveConnector('your-api-key');
+$shove->queues->create('default', 'unicast');
+```
+
+### Adding a Worker to Your Queue
+
+With your queue created, you can now add a worker to your queue. A
+worker is a URL that Shove will send jobs to.
+
+Inside your new queue's detail page, find the Worker section and
+click the `Create Worker` button. You will be presented with a form to
+add a new
+worker to your queue. Specify the URL you intend to use to handle
+incoming jobs from Shove.
+
+:::tip Using Shove in Development Environments
+You must have a public URL for Shove to send jobs to. If you are running
+your Laravel application locally, you can use a service
+like [ngrok](https://ngrok.com/) to create a public URL for your local
+server.
+:::
+
+With your new queue and worker created, you are ready to set up your
+Laravel application to receive jobs from Shove!
+
+## Installation
+
+### 1. Install `shovedev/shove-laravel`
+
+```sh
+composer require shovedev/shove-laravel
+```
+
+#### Optional: Publish the configuration file
+
+```sh
+php artisan vendor:publish --provider="Shove\Laravel\ShoveServiceProvider"
+```
+
+### 2. Set Up Your Incoming Webhook Endpoint
+
+Shove sends jobs to your Laravel application using HTTP, so you need to
+define the route Shove will use to send jobs inside your
+Laravel routes. This endpoint should be publicly accessible, free from
+any authentication. Thankfully, Shove includes the `routes` method
+to make this a breeze.
+
+
+```php [routes/web.php]
+<?php
+use Illuminate\Support\Facades\Route;
+
+// Laravel's default route
+Route::get('/', function () {
+    return view('welcome');
+});
+
+// Set up your incoming Shove endpoint. By default
+// Shove will send jobs to the `/shove` endpoint.
+Shove::routes('/shove');
+
+// Other authenticated routes. For example from Laravel Jetstream...
+Route::middleware([
+    'auth:sanctum', config('jetstream.auth_session'), 'verified',
+])->group(function () {
+    Route::view('dashboard', 'dashboard')->name('dashboard');
+});
+```
+
+
+::: tip Custom Shove Endpoints
+Feel free to use a custom endpoint for your incoming Shove jobs. Just
+remember to configure your queue’s worker to use that URL.
+:::
+
+## 3. Define Your Environment Variables
+
+To verify incoming jobs are actually from Shove, Shove includes a
+`Shove-Signature` header when delivering a job to the worker's
+endpoint. The signature is a sha256 hash of the request body, signed
+using your signing secret.
+
+The Laravel package handles this verification by default, but you should
+ensure the following environment variables are included:
+
+
+```sh [.env]
+SHOVE_API_KEY=your-api-key
+SHOVE_SIGNING_SECRET=your-signing-secret
+```
+
+
+## 4. Disable CSRF Protection For Shove
+
+By default, Laravel protects your application from cross-site request
+forgeries. Laravel automatically generates a CSRF "token" for each
+active user session and verifies it during each request.
+
+Since Shove doesn’t use application sessions, you need to disable this
+protection for your queue's worker endpoint.
+
+To do this, follow the Laravel framework’s documentation
+for [Excluding URIs from CSRF Protection](https://laravel.com/docs/11.x/csrf#csrf-excluding-uris).
+
+:::tip Laravel 11
+If you’re using Laravel 11, Shove handles disabling CSRF verification
+automatically.
+:::
+
+## Queueing Jobs With Shove
+
+Imagine you have an API controller that accepts a `name`,
+`description`, and a `file`. After storing the episode in your database,
+you want to process the episode in the background to avoid making
+the user wait for the episode to process, risking a timeout.
+
+To queue a job with Shove, you can use Laravel's built-in `dispatch`
+helper to queue jobs.
+
+```php [app/Http/Controllers/PodcastController.php]
+<?php
+
+namespace App\Http\Controllers\API;
+
+use App\Jobs\ProcessPodcastEpisode;
+use App\Models\Episode;
+use Illuminate\Http\Request;
+
+class PodcastStoreController extends Controller
+{
+    public function __invoke(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string',
+            'description' => 'required|string',
+            'file' => 'required|file',
+        ]);
+
+        $episode = Episode::create([
+            'name' => $request->input('name'),
+            'description' => $request->input('description'),
+            'file' => $request->file('file')->store('podcasts'),
+        ]);
+
+        dispatch(new ProcessPodcastEpisode($episode)) // [!code focus]
+            ->onConnection('shove') // [!code focus]
+            ->onQueue('podcasts'); // [!code focus]
+
+        return response()->json(['message' => 'Podcast queued for processing']);
+    }
+}
+```
+
+Because we've set up our Laravel application to receive jobs from
+Shove, the `ProcessPodcastEpisode` job will be sent to the worker
+endpoint we defined in `routes/web.php` using `Shove::routes`. Shove
+will then process the job using the `handle` method from our
+`ProcessPodcastEpisode` job class.
