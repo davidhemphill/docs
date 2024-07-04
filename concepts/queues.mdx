@@ -1,0 +1,29 @@
+---
+title: 'Queues'
+description: 'Learn about Queues'
+---
+
+Queues receive Jobs and have many workers. They can be configured to
+use
+either a multicast or unicast strategy.
+
+### Unicast Queues (default)
+
+When using unicast queues, Shove will send a job to a single random
+worker. This allows each job to be processed only once by a single
+worker.
+
+### Multicast Queues
+
+When using a multicast queue, Shove will push a job to all workers.
+This
+allows for a parallel processing of each job where each worker can
+handle a job differently.
+
+For example, let's pretend you have a job where a user uploads a CSV
+file to your service. You could have two workers: one that handles
+generating a report from the CSV, and another worker that sends an admin
+an email notifying them of the new upload. Using this workflow allows
+for quicker processing, since the separate tasks would be handled in
+parallel.
+

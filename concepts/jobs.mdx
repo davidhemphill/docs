@@ -1,0 +1,25 @@
+---
+title: 'Jobs'
+description: 'Learn about jobs, how to create them, retries, and more.'
+---
+
+In Shove, jobs are a way to run application tasks in the background.
+You can create jobs using the dashboard, using Shove's client
+libraries or integrations, or via the API.
+They are useful for tasks that are too slow to run during a web request,
+tasks that need to be run at a specific time, or for tasks that need
+to be ran at regular intervals.
+
+Shove makes it easy to handle these background tasks by notifying
+your application via HTTP when a job should be run. This allows you
+to focus on only doing the work you need to do, and running the
+queuing infrastructure.
+
+## How Jobs Are Handled
+
+Jobs are essentially a JSON-encoded payload that is stored inside
+Shove. They are added to a queue, where they are stored until
+they're ready to be sent to your application.
+
+When a job is ready to be run, Shove will send an HTTP POST request
+to each of the endpoints you've configured for your workers.

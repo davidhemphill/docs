@@ -1,3 +1,8 @@
+---
+title: 'Laravel'
+description: 'Learn how to integrate Shove with your Laravel application.'
+---
+
 ## Introduction
 
 Shove's Laravel package provides a simple way to integrate Shove's
@@ -39,14 +44,11 @@ Shove's Laravel driver, this should be a _unicast_ queue.
 
 [Learn more about Queue types]()
 
-::: tip Queue Types
-While we recommend using a unicast queue with a single worker for most
-Laravel applications,
-you may also configure your queue as a multicast queue. This allows
-jobs to be handled by multiple workers at once (which can be at a
-completely different server) allowing you more flexibility in
-processing a single job.
-:::
+<Info>While we recommend using a unicast queue with a single worker for
+    most Laravel applications, you may also configure your queue as a
+    multicast queue. This allows jobs to be handled by multiple workers
+    at once (which can be at a completely different server) allowing you
+    more flexibility in processing a single job.</Info>
 
 ### Creating a New Queue Using the Shove PHP Library
 
@@ -68,17 +70,19 @@ add a new
 worker to your queue. Specify the URL you intend to use to handle
 incoming jobs from Shove.
 
-:::tip Using Shove in Development Environments
-You must have a public URL for Shove to send jobs to. If you are running
-your Laravel application locally, you can use a service
-like [ngrok](https://ngrok.com/) to create a public URL for your local
-server.
-:::
+<Info>
+    You must have a public URL for Shove to send jobs to. If you are
+    running
+    your Laravel application locally, you can use a service
+    like [ngrok](https://ngrok.com/) to create a public URL for your
+    local
+    server.
+</Info>
 
 With your new queue and worker created, you are ready to set up your
 Laravel application to receive jobs from Shove!
 
-## Installation
+## Setting Up Laravel
 
 ### 1. Install `shovedev/shove-laravel`
 
@@ -101,7 +105,7 @@ any authentication. Thankfully, Shove includes the `routes` method
 to make this a breeze.
 
 
-```php [routes/web.php]
+```php routes/web.php
 <?php
 use Illuminate\Support\Facades\Route;
 
@@ -123,10 +127,11 @@ Route::middleware([
 ```
 
 
-::: tip Custom Shove Endpoints
-Feel free to use a custom endpoint for your incoming Shove jobs. Just
-remember to configure your queue’s worker to use that URL.
-:::
+<Info>
+    Feel free to use a custom endpoint for your incoming Shove jobs.
+    Just
+    remember to configure your queue’s worker to use that URL.
+</Info>
 
 ## 3. Define Your Environment Variables
 
@@ -139,7 +144,7 @@ The Laravel package handles this verification by default, but you should
 ensure the following environment variables are included:
 
 
-```sh [.env]
+```sh .env
 SHOVE_API_KEY=your-api-key
 SHOVE_SIGNING_SECRET=your-signing-secret
 ```
@@ -151,16 +156,17 @@ By default, Laravel protects your application from cross-site request
 forgeries. Laravel automatically generates a CSRF "token" for each
 active user session and verifies it during each request.
 
-Since Shove doesn’t use application sessions, you need to disable this
+Since Shove does not use application sessions, you need to disable this
 protection for your queue's worker endpoint.
 
 To do this, follow the Laravel framework’s documentation
 for [Excluding URIs from CSRF Protection](https://laravel.com/docs/11.x/csrf#csrf-excluding-uris).
 
-:::tip Laravel 11
-If you’re using Laravel 11, Shove handles disabling CSRF verification
-automatically.
-:::
+<Info>
+    If you’re using Laravel 11, Shove handles disabling CSRF
+    verification
+    automatically.
+</Info>
 
 ## Queueing Jobs With Shove
 
@@ -172,7 +178,7 @@ the user wait for the episode to process, risking a timeout.
 To queue a job with Shove, you can use Laravel's built-in `dispatch`
 helper to queue jobs.
 
-```php [app/Http/Controllers/PodcastController.php]
+```php app/Http/Controllers/PodcastController.php
 <?php
 
 namespace App\Http\Controllers\API;
@@ -197,9 +203,9 @@ class PodcastStoreController extends Controller
             'file' => $request->file('file')->store('podcasts'),
         ]);
 
-        dispatch(new ProcessPodcastEpisode($episode)) // [!code focus]
-            ->onConnection('shove') // [!code focus]
-            ->onQueue('podcasts'); // [!code focus]
+        dispatch(new ProcessPodcastEpisode($episode))
+            ->onConnection('shove')
+            ->onQueue('podcasts');
 
         return response()->json(['message' => 'Podcast queued for processing']);
     }

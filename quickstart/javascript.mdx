@@ -1,0 +1,49 @@
+---
+title: 'JavaScript/TypeScript'
+description: ''
+---
+
+
+## Installation
+```sh
+npm install shove-js
+```
+
+### Creating Queues
+
+<CodeGroup>
+    ```js JavaScript
+    import {Shove} from 'shove-js';
+
+    const shove = new Shove('your-api-key')
+
+    shove.queues.create({
+    name: 'emails',
+    type: 'unicast'
+})
+    ```
+
+    ```js TypeScript
+    import {Shove} from 'shove-js';
+
+    const shove = new Shove('your-api-key')
+
+    shove.queues.create({
+    name: 'emails',
+    type: 'unicast'
+})
+    ```
+</CodeGroup>
+
+
+### Deleting Queues
+
+```js JavaScript
+import { Shove } from 'shove-js';
+
+const shove = new Shove('your-api-key')
+
+shove.queues.delete({
+    name: 'emails',
+})
+```
